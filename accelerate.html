@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>光标加速移动</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+            -webkit-touch-callout:none;  /*系统默认菜单被禁用*/
+            -webkit-user-select:none; /*webkit浏览器*/
+            -khtml-user-select:none; /*早期浏览器*/
+            -moz-user-select:none;/*火狐*/
+            -ms-user-select:none; /*IE10*/
+            user-select:none;
+        }
+        html,body {
+            height: 100%;
+        }
+        .main{
+            height: 100%;
+            width: 100%;
+            background: url("./static/background.jpg") no-repeat;
+            background-size: 100% 100%;
+            position: relative;
+        }
+        .app{
+            width: 57px;
+            height: 57px;
+            border-radius: 10px;
+            background-color: #a1dda1;
+            color: #ffffff;
+            font-size: 40px;
+            position: absolute;
+        }
+        .app > p{
+            text-align: center;
+        }
+        .app-wrap{
+            position: relative;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        .cursor-wrap{
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 0;
+            height: 0;
+        }
+        .cursor{
+            width: 20px;
+            height: 20px;
+            transform: translate(-10px,-10px);
+            border-radius: 10px;
+            background: rgba(255, 193, 88, 0.68);
+            /*animation-duration: 400ms;*/
+            /*animation-name: flicker;*/
+            /*animation-iteration-count: infinite;*/
+        }
+        @keyframes flicker {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        .sensing-wrap{
+            border: 2px solid #e89595;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            position: relative;
+            box-sizing: border-box;
+        }
+        .sensing-btn{
+            position: absolute;
+            left: 0;
+            top: 0;
+            transform: translate(-20px,-20px);
+            width: 40px;
+            height: 40px;
+            background: rgba(245, 54, 54, 0.62);
+            border-radius: 50%;
+        }
+        .remote-sensing{
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+        }
+        .hidden .cursor-wrap,.hidden .remote-sensing{
+            display: none;
+        }
+        .modal{
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-wrap{
+            width: 300px;
+            height: 180px;
+            background-color: rgba(255,255,255,1);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .btn{
+            width: 100px;
+            height: 35px;
+            line-height: 35px;
+            background-color: cornflowerblue;
+            color: #ffffff;
+            border-radius: 4px;
+            margin-top: 30px;
+            text-align: center;
+            text-decoration: none;
+        }
+        .modal.hidden{
+            display: none;
+        }
+        .btn-position{
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 0;
+            height: 0;
+        }
+    </style>
+</head>
+<body>
+<div class="main" id="main">
+    <div class="app-wrap">
+        <div class="app" style="left: 20px;top: 20px;">
+            <p>A</p>
+        </div>
+        <div class="app" style="right: 20px;top: 20px;">
+            <p>B</p>
+        </div>
+        <div class="app" style="bottom: 20px;left: 20px;">
+            <p>C</p>
+        </div>
+    </div>
+    <div class="cursor-wrap">
+        <div class="cursor" id="cursor-wrap"></div>
+    </div>
+    <div class="remote-sensing">
+        <div class="sensing-wrap" id="sensing-wrap">
+            <div class="btn-position">
+                <div class="sensing-btn" id="sensing-btn"></div>
+            </div>
+        </div>
+    </div>
+    <div class="modal hidden" id="modal">
+        <div class="modal-wrap">
+            <p class="font">已完成累计用时：<span id="time">0</span>ms</p>
+            <a class="btn" href="./accelerationAndUniformSpeed.html">下一关</a>
+            <a class="btn" href="javascript:location.reload();">重新挑战</a>
+        </div>
+    </div>
+</div>
+<script>
+    function remoteSensing(ele,wrap,cursor,targets) {
+        this.ele = ele
+        this.wrap = wrap
+        this.cursor = cursor
+        this.startTime = 0
+        this.targetList = []
+
+        this.RAF = null
+
+        this.angle = 0
+        this.speed = 0
+        this.x = 0
+        this.y = 0
+        this.prePosition = {
+            x: -10,
+            y: -10,
+        }
+
+        this.cursorPosition = this.cursor.getBoundingClientRect()
+
+        var self = this
+
+        this.touchFlag = false
+
+        function calculationWrapXY() {
+            var position = self.wrap.getBoundingClientRect()
+            return {
+                x: position.x,
+                y: position.y,
+                CCX:position.x + position.width/2,
+                CCY:position.y + position.height/2,
+                radius: position.width/2,
+            }
+        }
+
+        function getTargetList(targets) {
+            for(var i=0;i<targets.length;i++){
+                var position = targets[i].getBoundingClientRect()
+                var c = {
+                    x: position.x,
+                    y: position.y,
+                    width: position.width,
+                    height: position.height,
+                    move: false,
+                    t: targets[i]
+                }
+                self.targetList.push(c)
+            }
+        }
+
+        function goStart() {
+            touchmove({})
+        }
+
+        function judgeXY(x,y) {
+            var len = 0
+            for(var i=0;i<self.targetList.length;i++){
+                var target = self.targetList[i]
+                if(x > target.x && x< target.x + target.width && y > target.y && y < target.y + target.height){
+                    target.move = true
+                    target.t.style.backgroundColor = 'red'
+                }
+                if(target.move == true){
+                    len += 1
+                }
+            }
+            if(len == self.targetList.length){
+                end()
+                self.touchFlag = false
+                document.getElementById('modal').style.display = 'flex'
+                document.getElementById('time').innerText = (new Date().getTime() - self.startTime)
+            }
+        }
+
+        function touchstart() {
+            console.log('touchstart');
+            self.touchFlag = true
+            self.startTime = new Date().getTime()
+            start()
+        }
+
+        function touchmove(e) {
+            if(self.touchFlag == false) return
+            var touch = e.targetTouches && e.targetTouches[0] || { pageX:self.wrapXY.x + self.wrapXY.radius,pageY: self.wrapXY.y + self.wrapXY.radius}
+            console.log('touchmove');
+            var x = touch.pageX - self.wrapXY.x - self.wrapXY.radius
+            var y = touch.pageY - self.wrapXY.y - self.wrapXY.radius
+            var r = Math.sqrt(Math.pow(x,2) + Math.pow(y,2))
+            var tan = Math.abs(y/x)
+            if(Math.abs(r) > self.wrapXY.radius){
+                var _x = Math.sqrt(Math.pow(self.wrapXY.radius,2) / (1+Math.pow(tan,2)))
+                var _y = _x*tan
+                if(x < 0){
+                    _x = -_x
+                }
+                if(y < 0){
+                    _y = -_y
+                }
+                x = _x
+                y = _y
+            }
+            // 移动速度
+            self.speed = (self.speed+r)/50
+            self.angle = tan
+            self.x = x
+            self.y = y
+            self.ele.style.transform = 'translate('+(x-20)+'px,'+(y-20)+'px)'
+        }
+
+        function touchend() {
+            console.log('touchend');
+            goStart()
+            end()
+            self.touchFlag = false
+        }
+
+        function start(){
+            self.RAF = requestAnimationFrame(cursorMove)
+        }
+
+        function end(){
+            self.prePosition = {
+                x: -10,
+                y: -10,
+            }
+            self.speed = 0
+            self.angle = 0
+            self.cursor.style.transform = 'translate(' + -10 + 'px,' + -10 + 'px)'
+            cancelAnimationFrame(self.RAF)
+        }
+
+        function cursorMove() {
+            if(self.speed != 0) {
+                var _x = Math.sqrt(Math.pow(self.speed, 2) / (1 + Math.pow(self.angle, 2)))
+                var _y = _x * self.angle
+                if (self.x < 0) {
+                    _x = -_x
+                }
+                if (self.y < 0) {
+                    _y = -_y
+                }
+                var x = self.prePosition.x + _x
+                var y = self.prePosition.y + _y
+                self.prePosition = {
+                    x: x,
+                    y: y,
+                }
+                if (x < -self.cursorPosition.left) {
+                    x = -self.cursorPosition.left
+                }
+                if(x > (self.cursorPosition.left -20)){
+                    x = self.cursorPosition.left -20
+                }
+                if (y < -self.cursorPosition.top) {
+                    y = -self.cursorPosition.top
+                }
+                if( y > (self.cursorPosition.top - 20)){
+                    y = (self.cursorPosition.top -20)
+                }
+                self.cursor.style.transform = 'translate(' + x + 'px,' + y + 'px)'
+                self.RAF = requestAnimationFrame(cursorMove)
+                judgeXY(x + self.cursorPosition.left + 20,y + self.cursorPosition.top + 20)
+                return
+            }
+            self.RAF = requestAnimationFrame(cursorMove)
+        }
+
+        this.ele.addEventListener('touchstart', touchstart, false)
+        this.ele.addEventListener('touchmove', touchmove, false)
+        this.ele.addEventListener('touchend', touchend, false)
+        this.wrapXY = calculationWrapXY()
+        getTargetList(targets)
+        return this
+    }
+    var remote = new remoteSensing(
+        document.getElementById('sensing-btn'),
+        document.getElementById('sensing-wrap'),
+        document.getElementById('cursor-wrap'),
+        document.querySelectorAll('.app')
+    )
+</script>
+</body>
+</html>
