@@ -167,12 +167,15 @@
     <div class="modal hidden" id="modal">
         <div class="modal-wrap">
             <p class="font">已完成累计用时：<span id="time">0</span>ms</p>
-            <a class="btn" href="./accelerate.html">下一关</a>
+            <a class="btn" href="./uniformSpeed2.html">下一关</a>
             <a class="btn" href="javascript:location.reload();">重新挑战</a>
         </div>
     </div>
 </div>
 <script>
+    document.oncontextmenu = function(e){
+        e.returnValue = false;
+    }
     function remoteSensing(ele,wrap,cursor,targets,main) {
         this.ele = ele
         this.wrap = wrap
@@ -246,7 +249,15 @@
                 end()
                 self.touchFlag = false
                 document.getElementById('modal').style.display = 'flex'
-                document.getElementById('time').innerText = (new Date().getTime() - self.startTime)
+                var time = (new Date().getTime() - self.startTime)
+                var obj = localStorage.getItem('timer') || '{}'
+                obj = JSON.parse(obj)
+                obj.page3 = {
+                    name: '光标匀速移动快',
+                    time: time
+                }
+                localStorage.setItem('timer', JSON.stringify(obj))
+                document.getElementById('time').innerText = time
             }
         }
         

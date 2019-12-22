@@ -7,7 +7,7 @@
     <meta content="yes" name="apple-mobile-web-app-capable">
     <meta content="black" name="apple-mobile-web-app-status-bar-style">
     <meta content="telephone=no" name="format-detection">
-    <title>光标加速转匀速移动</title>
+    <title>光标加速移动</title>
     <style>
         *{
             margin: 0;
@@ -139,6 +139,10 @@
             width: 0;
             height: 0;
         }
+        .res-show p{
+            margin: 5px 0;
+        }
+        
     </style>
 </head>
 <body>
@@ -168,15 +172,21 @@
         <div class="modal-wrap">
             <p class="font">已完成累计用时：<span id="time">0</span>ms</p>
             <a class="btn" href="javascript:location.reload();">重新挑战</a>
+            <div class="res-show" id="res-show">
+                
+            </div>
         </div>
     </div>
 </div>
 <script>
+    document.oncontextmenu = function(e){
+        e.returnValue = false;
+    }
     function remoteSensing(ele,wrap,cursor,targets,main) {
         this.ele = ele
         this.wrap = wrap
-        this.cursor = cursor
         this.main = main
+        this.cursor = cursor
         this.startTime = 0
         this.targetList = []
         this.show = false
@@ -189,7 +199,7 @@
         this.x = 0
         this.y = 0
         this.prePosition = {
-            x: -1,
+            x: -10,
             y: -10,
         }
 
@@ -245,7 +255,23 @@
                 end()
                 self.touchFlag = false
                 document.getElementById('modal').style.display = 'flex'
-                document.getElementById('time').innerText = (new Date().getTime() - self.startTime)
+                var time = (new Date().getTime() - self.startTime)
+                var obj = localStorage.getItem('timer') || '{}'
+                obj = JSON.parse(obj)
+                obj.page2 = {
+                    name: '光标加速移动慢',
+                    time: time
+                }
+                var key = Object.keys(obj)
+                var html = ''
+                for(var i =0;i<key.length;i++){
+                    var idx = obj[key[i]]
+                    html += '<p>'+idx.name+' 用时：'+idx.time+'</p>'
+                }
+                // console.log(html)
+                document.getElementById('res-show').innerHTML = html
+                localStorage.setItem('timer', JSON.stringify(obj))
+                document.getElementById('time').innerText = time
             }
         }
 
@@ -276,11 +302,10 @@
                 }
                 x = _x
                 y = _y
-            } else {
-                // 移动速度
-                self.speed = (self.speed+r)/25
-                self.angle = tan
             }
+            // 移动速度
+            self.speed = (self.speed+r)/50
+            self.angle = tan
             self.x = x
             self.y = y
             self.ele.style.transform = 'translate('+(x-20)+'px,'+(y-20)+'px)'
@@ -294,7 +319,7 @@
             self.touchFlag = false
             e.cancelBubble = true
         }
-
+        
         function mainTouchStart(e){
             console.log('mainTouchStart')
             if(self.show === false) {

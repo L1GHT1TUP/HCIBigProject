@@ -7,7 +7,7 @@
     <meta content="yes" name="apple-mobile-web-app-capable">
     <meta content="black" name="apple-mobile-web-app-status-bar-style">
     <meta content="telephone=no" name="format-detection">
-    <title>光标加速移动</title>
+    <title>光标匀速移动</title>
     <style>
         *{
             margin: 0;
@@ -167,12 +167,15 @@
     <div class="modal hidden" id="modal">
         <div class="modal-wrap">
             <p class="font">已完成累计用时：<span id="time">0</span>ms</p>
-            <a class="btn" href="./accelerationAndUniformSpeed.html">下一关</a>
+            <a class="btn" href="./accelerate1.html">下一关</a>
             <a class="btn" href="javascript:location.reload();">重新挑战</a>
         </div>
     </div>
 </div>
 <script>
+    document.oncontextmenu = function(e){
+        e.returnValue = false;
+    }
     function remoteSensing(ele,wrap,cursor,targets,main) {
         this.ele = ele
         this.wrap = wrap
@@ -181,10 +184,10 @@
         this.startTime = 0
         this.targetList = []
         this.show = false
-
+        
         this.RAF = null
         this.touchTimer  = null
-
+        
         this.angle = 0
         this.speed = 0
         this.x = 0
@@ -193,13 +196,13 @@
             x: -10,
             y: -10,
         }
-
+        
         this.cursorPosition = this.cursor.getBoundingClientRect()
-
+        
         var self = this
 
         this.touchFlag = false
-
+        
         function calculationWrapXY() {
             var position = self.wrap.getBoundingClientRect()
             return {
@@ -210,7 +213,7 @@
                 radius: position.width/2,
             }
         }
-
+        
         function getTargetList(targets) {
             for(var i=0;i<targets.length;i++){
                 var position = targets[i].getBoundingClientRect()
@@ -225,11 +228,11 @@
                 self.targetList.push(c)
             }
         }
-
+        
         function goStart() {
             touchmove({})
         }
-
+        
         function judgeXY(x,y) {
             var len = 0
             for(var i=0;i<self.targetList.length;i++){
@@ -246,10 +249,18 @@
                 end()
                 self.touchFlag = false
                 document.getElementById('modal').style.display = 'flex'
-                document.getElementById('time').innerText = (new Date().getTime() - self.startTime)
+                var time = (new Date().getTime() - self.startTime)
+                var obj = localStorage.getItem('timer') || '{}'
+                obj = JSON.parse(obj)
+                obj.page4 = {
+                    name: '光标匀速移动慢',
+                    time: time
+                }
+                localStorage.setItem('timer', JSON.stringify(obj))
+                document.getElementById('time').innerText = time
             }
         }
-
+        
         function touchstart(e) {
             console.log('touchstart');
             self.touchFlag = true
@@ -257,7 +268,7 @@
             start()
             e.cancelBubble = true
         }
-
+        
         function touchmove(e) {
             if(self.touchFlag == false) return
             var touch = e.targetTouches && e.targetTouches[0] || { pageX:self.wrapXY.x + self.wrapXY.radius,pageY: self.wrapXY.y + self.wrapXY.radius}
@@ -279,14 +290,14 @@
                 y = _y
             }
             // 移动速度
-            self.speed = (self.speed+r)/25
+            self.speed = r /50
             self.angle = tan
             self.x = x
             self.y = y
             self.ele.style.transform = 'translate('+(x-20)+'px,'+(y-20)+'px)'
             e.cancelBubble = true
         }
-
+        
         function touchend(e) {
             console.log('touchend');
             goStart()
@@ -294,7 +305,7 @@
             self.touchFlag = false
             e.cancelBubble = true
         }
-        
+
         function mainTouchStart(e){
             console.log('mainTouchStart')
             if(self.show === false) {
@@ -316,11 +327,11 @@
             clearTimeout(self.touchTimer)
             return false
         }
-
+        
         function start(){
             self.RAF = requestAnimationFrame(cursorMove)
         }
-
+        
         function end(){
             self.prePosition = {
                 x: -10,
@@ -331,7 +342,7 @@
             self.cursor.style.transform = 'translate(' + -10 + 'px,' + -10 + 'px)'
             cancelAnimationFrame(self.RAF)
         }
-
+        
         function cursorMove() {
             if(self.speed != 0) {
                 var _x = Math.sqrt(Math.pow(self.speed, 2) / (1 + Math.pow(self.angle, 2)))
