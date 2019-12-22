@@ -94,7 +94,8 @@
             bottom: 20px;
         }
         .hidden .cursor-wrap,.hidden .remote-sensing{
-            display: none;
+            visibility: hidden;
+            opacity: 0;
         }
         .modal{
             position: absolute;
@@ -141,7 +142,7 @@
     </style>
 </head>
 <body>
-<div class="main" id="main">
+<div class="main hidden" id="main">
     <div class="app-wrap">
         <div class="app" style="left: 20px;top: 20px;">
             <p>H</p>
@@ -172,14 +173,17 @@
     </div>
 </div>
 <script>
-    function remoteSensing(ele,wrap,cursor,targets) {
+    function remoteSensing(ele,wrap,cursor,targets,main) {
         this.ele = ele
         this.wrap = wrap
+        this.main = main
         this.cursor = cursor
         this.startTime = 0
         this.targetList = []
+        this.show = false
         
         this.RAF = null
+        this.touchTimer  = null
         
         this.angle = 0
         this.speed = 0
@@ -246,11 +250,12 @@
             }
         }
         
-        function touchstart() {
+        function touchstart(e) {
             console.log('touchstart');
             self.touchFlag = true
             self.startTime = new Date().getTime()
             start()
+            e.cancelBubble = true
         }
         
         function touchmove(e) {
@@ -279,13 +284,37 @@
             self.x = x
             self.y = y
             self.ele.style.transform = 'translate('+(x-20)+'px,'+(y-20)+'px)'
+            e.cancelBubble = true
         }
         
-        function touchend() {
+        function touchend(e) {
             console.log('touchend');
             goStart()
             end()
             self.touchFlag = false
+            e.cancelBubble = true
+        }
+
+        function mainTouchStart(e){
+            console.log('mainTouchStart')
+            if(self.show === false) {
+                self.mainFlag = true
+                self.show = true
+                self.touchTimer = setTimeout(() => {
+                    if (self.mainFlag === true) {
+                        self.main.className = 'main'
+                    }
+                }, 2000)
+            } else {
+                self.main.className = 'main hidden'
+                self.show = false
+            }
+            return false
+        }
+        function mainTouchEnd() {
+            self.mainFlag = false
+            clearTimeout(self.touchTimer)
+            return false
         }
         
         function start(){
@@ -342,6 +371,8 @@
         this.ele.addEventListener('touchstart', touchstart, false)
         this.ele.addEventListener('touchmove', touchmove, false)
         this.ele.addEventListener('touchend', touchend, false)
+        this.main.addEventListener('touchstart', mainTouchStart, false)
+        this.main.addEventListener('touchend', mainTouchEnd, false)
         this.wrapXY = calculationWrapXY()
         getTargetList(targets)
         return this
@@ -350,7 +381,8 @@
         document.getElementById('sensing-btn'),
         document.getElementById('sensing-wrap'),
         document.getElementById('cursor-wrap'),
-        document.querySelectorAll('.app')
+        document.querySelectorAll('.app'),
+        document.getElementById('main')
     )
 </script>
 </body>
