@@ -254,7 +254,7 @@
                 var obj = localStorage.getItem('timer') || '{}'
                 obj = JSON.parse(obj)
                 obj.page4 = {
-                    name: '光标匀速移动慢',
+                    name: '光标匀速/速度2',
                     time: time
                 }
                 localStorage.setItem('timer', JSON.stringify(obj))
@@ -291,7 +291,7 @@
                 y = _y
             }
             // 移动速度
-            self.speed = r /50
+            self.speed = r /12.5
             self.angle = tan
             self.x = x
             self.y = y
